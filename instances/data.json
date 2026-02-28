@@ -1,0 +1,10 @@
+[
+  {
+    "repository": "CubicCreeper/iis.Stupid.Menu-LTS",
+    "server": true
+  },
+  {
+    "repository": "NullTheDev/iiDK.Reborn",
+    "server": false
+  }
+]

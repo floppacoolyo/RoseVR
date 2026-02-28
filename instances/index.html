@@ -1,0 +1,1054 @@
+<!--
+
+TO THOSE THAT WILL SEND THREATS OVER THIS COMMIT:
+I am aware that I quit. This site is maintained by GitHub and the community, and this solely exists to be a clean UI for getting the latest LTS fork for ii's Stupid Menu.
+I have no more affiliation or commitment to work on the game. This website and page will not be posted or blasted anywhere, and will be shared socially between people.
+
+It is no longer my choice whether this menu lives or dies. Its life is in the hands of the community. If you want it to thrive, fork it. If you don't, let it die.
+
+-->
+
+<!--
+
+PRIVACY DISCLAIMER
+This site may request your GitHub PAT token. Please note that this token is stored in sessionStorage and is only used to authenticate requests to GitHub's API. 
+It is never sent to any third party or stored in cookies. You can revoke the token at any time from your GitHub settings. 
+Providing a token allows for higher rate limits when fetching data, but it is not required to use the site.
+
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>..menu instances..</title>
+    <link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600&display=swap');
+
+        :root {
+            --bg: #0d1117;
+            --card-bg: #161b22;
+            --border: #30363d;
+            --text: #c9d1d9;
+            --muted: #8b949e;
+            --accent: #58a6ff;
+            --online: #3fb950;
+            --offline: #f85149;
+            --header-h: 56px;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        /* ── HEADER ── */
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            height: var(--header-h);
+            background: rgba(13,17,23,0.9);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 2rem;
+        }
+
+        .logo {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--text);
+            letter-spacing: -0.02em;
+        }
+        .logo span { color: var(--muted); }
+
+        .header-actions { display: flex; gap: 0.6rem; }
+
+        .btn {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.8rem;
+            font-weight: 500;
+            padding: 0.38rem 0.9rem;
+            border-radius: 6px;
+            cursor: pointer;
+            border: 1px solid var(--border);
+            background: var(--card-bg);
+            color: var(--text);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            transition: border-color 0.15s, background 0.15s, color 0.15s;
+        }
+        .btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(88,166,255,0.06); }
+        .btn-primary { background: var(--accent); color: #0d1117; border-color: var(--accent); font-weight: 600; }
+        .btn-primary:hover { background: #79b8ff; border-color: #79b8ff; color: #0d1117; }
+
+        /* ── LAYOUT ── */
+        .container {
+            display: flex;
+            width: 92%;
+            max-width: 1280px;
+            margin: 2rem auto;
+            gap: 1.5rem;
+            align-items: flex-start;
+        }
+
+        /* ── SIDEBAR ── */
+        .sidebar { width: 220px; flex-shrink: 0; display: flex; flex-direction: column; gap: 1rem; }
+
+        .filter-group {
+            background: var(--card-bg);
+            padding: 1.1rem 1.2rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+        .filter-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--muted);
+            margin-bottom: 0.9rem;
+        }
+        .checkbox-container { display: flex; flex-direction: column; gap: 8px; }
+        .checkbox-container label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.82rem;
+            cursor: pointer;
+            color: var(--text);
+            transition: color 0.15s;
+        }
+        .checkbox-container label:hover { color: var(--accent); }
+        input[type="checkbox"] { accent-color: var(--accent); }
+
+        .stats-box {
+            background: var(--card-bg);
+            padding: 1rem 1.2rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            font-size: 0.8rem;
+            color: var(--muted);
+            line-height: 1.8;
+        }
+        .stats-box strong { color: var(--text); }
+
+        /* ── MAIN GRID ── */
+        .main-content {
+            flex-grow: 1;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+            gap: 0.85rem;
+            align-content: start;
+        }
+
+        /* ── CARDS ── */
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem 1.1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+            animation: fadeIn 0.3s ease both;
+        }
+        .card:hover { border-color: #484f58; transform: translateY(-1px); }
+
+        /* ── TOP CARD ── */
+        .card.top-instance {
+            border-color: #e3b341;
+            background: linear-gradient(135deg, rgba(227,179,65,0.08) 0%, var(--card-bg) 60%);
+            box-shadow: 0 0 0 1px rgba(227,179,65,0.25), 0 4px 24px rgba(227,179,65,0.08);
+        }
+        .card.top-instance:hover {
+            border-color: #f0c84a;
+            transform: translateY(-2px);
+            box-shadow: 0 0 0 1px rgba(227,179,65,0.4), 0 8px 32px rgba(227,179,65,0.14);
+        }
+        .card.top-instance .card-name { color: #f0d080; }
+        .top-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.68rem;
+            font-weight: 700;
+            color: #e3b341;
+            background: rgba(227,179,65,0.12);
+            border: 1px solid rgba(227,179,65,0.3);
+            padding: 2px 7px;
+            border-radius: 20px;
+            letter-spacing: 0.03em;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; }
+        .card-name { font-weight: 600; font-size: 0.95rem; word-break: break-all; }
+        .card-owner { font-size: 0.75rem; color: var(--muted); margin-top: 1px; }
+
+        .card-header-right { display: flex; gap: 0.4rem; align-items: center; flex-shrink: 0; }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.68rem;
+            font-weight: 600;
+            padding: 2px 7px;
+            border-radius: 20px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .status-dot { height: 6px; width: 6px; border-radius: 50%; }
+        .pill-online  { background: rgba(63,185,80,0.12);  color: var(--online);  border: 1px solid rgba(63,185,80,0.25);  }
+        .pill-offline { background: rgba(248,81,73,0.12);  color: var(--offline); border: 1px solid rgba(248,81,73,0.25);  }
+        .dot-online   { background: var(--online); }
+        .dot-offline  { background: var(--offline); }
+
+        .card-version {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.72rem;
+            color: var(--muted);
+            background: rgba(139,148,158,0.1);
+            display: inline-block;
+            padding: 1px 6px;
+            border-radius: 4px;
+            width: fit-content;
+        }
+
+        .score-bar { height: 5px; background: #21262d; border-radius: 4px; overflow: hidden; }
+        .score-fill { height: 100%; border-radius: 4px; transition: width 0.7s cubic-bezier(.4,0,.2,1); }
+
+        .card-meta { display: flex; justify-content: space-between; align-items: center; font-size: 0.74rem; color: var(--muted); }
+
+        .card-footer { display: flex; gap: 0.7rem; margin-top: 0.3rem; flex-wrap: wrap; align-items: center; }
+        .card-footer a { color: var(--accent); text-decoration: none; font-size: 0.79rem; font-weight: 500; }
+        .card-footer a:hover { text-decoration: underline; }
+
+        .stars-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            font-size: 0.74rem;
+            color: var(--muted);
+        }
+
+        /* ── CACHE NOTICE ── */
+        .cache-notice {
+            grid-column: 1 / -1;
+            font-size: 0.73rem;
+            color: var(--muted);
+            font-family: 'JetBrains Mono', monospace;
+            padding: 0.4rem 0.2rem 0.6rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+        .cache-notice span { opacity: 0.6; }
+        .cache-notice button {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--accent);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            padding: 1px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: border-color 0.15s;
+        }
+        .cache-notice button:hover { border-color: var(--accent); }
+
+        /* ── FAQ PAGE (overlay) ── */
+        .faq-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 200;
+            background: rgba(1,4,9,0.85);
+            backdrop-filter: blur(4px);
+            justify-content: center;
+            align-items: flex-start;
+            padding: 4rem 1rem 2rem;
+            overflow-y: auto;
+        }
+        .faq-overlay.open { display: flex; }
+
+        .faq-panel {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            width: 100%;
+            max-width: 660px;
+            padding: 2rem;
+            position: relative;
+            animation: slideUp 0.25s ease;
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .faq-close {
+            position: absolute;
+            top: 1.1rem;
+            right: 1.1rem;
+            background: none;
+            border: none;
+            color: var(--muted);
+            font-size: 1.3rem;
+            cursor: pointer;
+            line-height: 1;
+            transition: color 0.15s;
+        }
+        .faq-close:hover { color: var(--text); }
+
+        .faq-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: var(--text);
+        }
+        .faq-title span { color: var(--muted); }
+
+        .faq-item { border-top: 1px solid var(--border); }
+        .faq-item:last-child { border-bottom: 1px solid var(--border); }
+
+        .faq-item summary {
+            font-weight: 600;
+            font-size: 0.9rem;
+            padding: 1rem 0;
+            cursor: pointer;
+            list-style: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+            transition: color 0.15s;
+        }
+        .faq-item summary:hover { color: var(--accent); }
+        .faq-item summary::after {
+            content: '+';
+            font-size: 1.1rem;
+            color: var(--muted);
+            transition: transform 0.2s;
+            flex-shrink: 0;
+        }
+        .faq-item[open] > summary::after { content: '−'; }
+
+        .faq-body {
+            font-size: 0.85rem;
+            color: var(--muted);
+            line-height: 1.75;
+            padding-bottom: 1rem;
+        }
+        .faq-body a { color: var(--accent); }
+        .faq-body a:hover { text-decoration: underline; }
+        .faq-body ol { padding-left: 1.2rem; display: flex; flex-direction: column; gap: 0.4rem; }
+        code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8em;
+            background: rgba(139,148,158,0.1);
+            padding: 1px 5px;
+            border-radius: 4px;
+            color: var(--text);
+        }
+
+        /* ── LOADING/EMPTY STATES ── */
+        .state-msg {
+            grid-column: 1 / -1;
+            color: var(--muted);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            padding: 2rem;
+        }
+
+        .loading-dots::after {
+            content: '.';
+            animation: dots 1.2s steps(3, end) infinite;
+        }
+        @keyframes dots {
+            0%   { content: '.'; }
+            33%  { content: '..'; }
+            66%  { content: '...'; }
+            100% { content: '.'; }
+        }
+
+        /* ── AUTH POPUP ── */
+        .auth-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 300;
+            background: rgba(1,4,9,0.88);
+            backdrop-filter: blur(6px);
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+        }
+        .auth-overlay.open { display: flex; }
+
+        .auth-panel {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            width: 100%;
+            max-width: 520px;
+            padding: 2rem;
+            position: relative;
+            animation: slideUp 0.25s ease;
+        }
+
+        .auth-close {
+            position: absolute;
+            top: 1rem; right: 1rem;
+            background: none; border: none;
+            color: var(--muted); font-size: 1.3rem;
+            cursor: pointer; line-height: 1;
+            transition: color 0.15s;
+        }
+        .auth-close:hover { color: var(--text); }
+
+        .auth-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1rem; font-weight: 700;
+            margin-bottom: 0.4rem;
+        }
+        .auth-title span { color: var(--muted); }
+
+        .auth-subtitle {
+            font-size: 0.82rem;
+            color: var(--muted);
+            margin-bottom: 1.4rem;
+            line-height: 1.6;
+        }
+        .auth-subtitle a { color: var(--accent); }
+
+        .rate-box {
+            background: rgba(248,81,73,0.07);
+            border: 1px solid rgba(248,81,73,0.2);
+            border-radius: 6px;
+            padding: 0.7rem 0.9rem;
+            font-size: 0.8rem;
+            color: #f0a8a6;
+            margin-bottom: 1.4rem;
+            line-height: 1.6;
+            display: flex;
+            gap: 0.6rem;
+            align-items: flex-start;
+        }
+        .rate-box-icon { flex-shrink: 0; margin-top: 1px; }
+
+        .auth-steps {
+            font-size: 0.82rem;
+            color: var(--muted);
+            margin-bottom: 1.4rem;
+            line-height: 1.7;
+        }
+        .auth-steps ol { padding-left: 1.2rem; display: flex; flex-direction: column; gap: 0.3rem; }
+        .auth-steps a { color: var(--accent); }
+        .auth-steps code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8em;
+            background: rgba(139,148,158,0.1);
+            padding: 1px 5px;
+            border-radius: 4px;
+            color: var(--text);
+        }
+
+        .auth-input-row {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.8rem;
+        }
+        .auth-input {
+            flex: 1;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            background: #0d1117;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.45rem 0.75rem;
+            color: var(--text);
+            outline: none;
+            transition: border-color 0.15s;
+        }
+        .auth-input:focus { border-color: var(--accent); }
+        .auth-input::placeholder { color: var(--muted); opacity: 0.6; }
+
+        .auth-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: var(--muted);
+            flex-wrap: wrap;
+            gap: 0.4rem;
+        }
+        .auth-footer a { color: var(--accent); }
+
+        .token-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.73rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .token-indicator.set   { color: var(--online); }
+        .token-indicator.unset { color: var(--muted); opacity: 0.6; }
+
+        /* ── RESPONSIVE ── */
+        @media (max-width: 720px) {
+            .container { flex-direction: column; width: 95%; }
+            .sidebar { width: 100%; flex-direction: row; flex-wrap: wrap; gap: 0.7rem; }
+            .filter-group, .stats-box { flex: 1 1 180px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- AUTH POPUP -->
+<div class="auth-overlay open" id="auth-overlay">
+    <div class="auth-panel" role="dialog" aria-modal="true" aria-label="GitHub Authentication">
+        <button class="auth-close" id="auth-close" aria-label="Close">×</button>
+        <div class="auth-title"><span>//</span> github authentication</div>
+        <p class="auth-subtitle">
+            Providing a Personal Access Token lets this page make authenticated API requests to GitHub.
+            You can skip this, but you may be rate limited.
+        </p>
+
+        <div class="rate-box">
+            <span class="rate-box-icon">⚠</span>
+            <span>
+                <strong>Unauthenticated:</strong> 60 requests/hour per IP.<br>
+                <strong>Authenticated:</strong> 5,000 requests/hour.<br>
+                Each page load makes multiple requests per fork — you can hit the limit quickly without a token.
+            </span>
+        </div>
+
+        <div class="auth-steps">
+            <strong style="color:var(--text);display:block;margin-bottom:0.4rem;">How to get a token (no permissions needed):</strong>
+            <ol>
+                <li>Go to <a href="https://github.com/settings/tokens?type=beta" target="_blank" rel="noopener">github.com/settings/tokens</a></li>
+                <li>Click <strong style="color:var(--text)">Generate new token</strong> → choose <strong style="color:var(--text)">Fine-grained</strong> or <strong style="color:var(--text)">Classic</strong></li>
+                <li>For Classic: set any expiry, select <strong style="color:var(--text)">no scopes</strong> (public data only)</li>
+                <li>For Fine-grained: set expiry, leave all permissions at <code>No access</code></li>
+                <li>Click <strong style="color:var(--text)">Generate token</strong> and copy it below</li>
+            </ol>
+        </div>
+
+        <div class="auth-input-row">
+            <input class="auth-input" type="password" id="token-input" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off" spellcheck="false" />
+            <button class="btn btn-primary" id="token-save-btn">Save</button>
+        </div>
+
+        <div class="auth-footer">
+            <span>Token is stored in <code>sessionStorage</code> only — never sent anywhere except GitHub.</span>
+            <button class="btn" id="auth-skip-btn">Skip for now</button>
+        </div>
+    </div>
+</div>
+
+<header>
+    <div class="logo"><span>//</span> menu instances</div>
+    <div class="header-actions">
+        <button class="btn token-indicator unset" id="token-btn" title="Configure GitHub token">⚿ no token</button>
+        <button class="btn" id="faq-btn">? FAQ</button>
+        <a class="btn btn-primary" href="https://github.com/iiDk-the-actual/crimsoncauldron.dev/compare" target="_blank" rel="noopener">+ Add Instance</a>
+    </div>
+</header>
+
+<!-- FAQ OVERLAY -->
+<div class="faq-overlay" id="faq-overlay">
+    <div class="faq-panel" role="dialog" aria-modal="true" aria-label="FAQ">
+        <button class="faq-close" id="faq-close" aria-label="Close FAQ">×</button>
+        <div class="faq-title"><span>//</span> frequently asked questions</div>
+
+        <details class="faq-item">
+            <summary>What is an instance?</summary>
+            <div class="faq-body">
+                Due to the archival of <a href="https://github.com/iiDk-the-actual/iis.Stupid.Menu" target="_blank">ii's Stupid Menu</a>, it's hard to find reliable forks of said mod. This website serves as a host for the forks to communicate.<br><br>
+                These forks are hosted and continued by other people, and I have no affiliation with the users or any post additions to the database.
+            </div>
+        </details>
+
+        <details class="faq-item">
+            <summary>How do I add my instance?</summary>
+            <div class="faq-body">
+                <ol>
+                    <li>Make an account on <a href="https://github.com" target="_blank">GitHub</a>.</li>
+                    <li>Make a fork of <a href="https://github.com/iiDk-the-actual/iis.Stupid.Menu/" target="_blank">ii's Stupid Menu</a>.</li>
+                    <li>Maintain the repository, amass stars, and stay updated to get to the top of the list.</li>
+                </ol>
+            </div>
+        </details>
+
+        <details class="faq-item">
+            <summary>Who is maintaining this site?</summary>
+            <div class="faq-body">
+                This site is not maintained. It shall update based on GitHub rankings and score. Results shown may be inaccurate, malicious, or outdated. Use your judgement when interacting with any of the listed repositories. Always check the code and be cautious when downloading or running software from the internet.
+            </div>
+        </details>
+    </div>
+</div>
+
+<div class="container">
+    <aside class="sidebar">
+        <div class="filter-group">
+            <div class="filter-title">Filter</div>
+            <div class="checkbox-container">
+                <label><input type="checkbox" id="filter-online">  Online only</label>
+                <label><input type="checkbox" id="filter-offline"> Offline only</label>
+                <label><input type="checkbox" id="filter-high-score"> High score (≥70%)</label>
+                <label><input type="checkbox" id="filter-hide-no-release" checked> Hide no-release repos</label>
+            </div>
+        </div>
+        <div class="stats-box" id="stats-box">
+            loading<span class="loading-dots"></span>
+        </div>
+    </aside>
+
+    <main class="main-content" id="instance-list">
+        <p class="state-msg">Fetching forks<span class="loading-dots"></span></p>
+    </main>
+</div>
+
+<script>
+    // ── CONFIG ────────────────────────────────────────────
+    const FORKS_API         = "https://api.github.com/repos/iiDk-the-actual/iis.Stupid.Menu/forks?sort=stargazers&per_page=100";
+    const FALLBACK_DATA_URL = "data.json";
+    const ONE_MONTH_MS      = 30 * 24 * 60 * 60 * 1000;
+    const CACHE_KEY         = "forks_cache";
+    const CACHE_TTL_MS      = 15 * 60 * 1000; // 15 minutes
+    const TOKEN_KEY         = "gh_token";
+
+    // ── TOKEN STORAGE ─────────────────────────────────────
+    // Stored only in sessionStorage — never persisted to cookies.
+
+    function saveToken(tok) {
+        try { sessionStorage.setItem(TOKEN_KEY, tok.trim()); } catch (_) {}
+    }
+    function loadToken() {
+        try { return sessionStorage.getItem(TOKEN_KEY) || ''; } catch (_) { return ''; }
+    }
+    function clearToken() {
+        try { sessionStorage.removeItem(TOKEN_KEY); } catch (_) {}
+    }
+
+    // ── AUTHENTICATED FETCH WRAPPER ───────────────────────
+    function ghFetch(url) {
+        const tok = loadToken();
+        const headers = { 'Accept': 'application/vnd.github+json' };
+        if (tok) headers['Authorization'] = `Bearer ${tok}`;
+        return fetch(url, { headers });
+    }
+
+    function updateTokenIndicator() {
+        const btn = document.getElementById('token-btn');
+        if (!btn) return;
+        const tok = loadToken();
+        if (tok) {
+            btn.textContent = '⚿ token set';
+            btn.classList.add('set');
+            btn.classList.remove('unset');
+            btn.style.borderColor = 'rgba(63,185,80,0.4)';
+            btn.style.color = 'var(--online)';
+            closeAuthPopup();
+        } else {
+            btn.textContent = '⚿ no token';
+            btn.classList.remove('set');
+            btn.classList.add('unset');
+            btn.style.borderColor = '';
+            btn.style.color = '';
+        }
+    }
+
+
+    // ── COOKIE / SESSION CACHE ────────────────────────────
+    // Priority: sessionStorage (fast, tab-scoped) → cookie (cross-tab, 15min TTL)
+    // Cookies have a 4 KB limit, so only write there if payload fits.
+
+    function saveCache(instances) {
+        try {
+            const payload = JSON.stringify({ ts: Date.now(), data: instances });
+            sessionStorage.setItem(CACHE_KEY, payload);
+            if (payload.length < 3584) {
+                const exp = new Date(Date.now() + CACHE_TTL_MS).toUTCString();
+                document.cookie = `${CACHE_KEY}=${encodeURIComponent(payload)}; expires=${exp}; path=/; SameSite=Strict`;
+            }
+        } catch (_) {}
+    }
+
+    function loadCache() {
+        // 1. sessionStorage
+        try {
+            const raw = sessionStorage.getItem(CACHE_KEY);
+            if (raw) {
+                const p = JSON.parse(raw);
+                if (Date.now() - p.ts < CACHE_TTL_MS) return { instances: p.data, source: "session" };
+            }
+        } catch (_) {}
+
+        // 2. cookie
+        try {
+            const match = document.cookie.split('; ').find(c => c.startsWith(CACHE_KEY + '='));
+            if (match) {
+                const p = JSON.parse(decodeURIComponent(match.split('=').slice(1).join('=')));
+                if (Date.now() - p.ts < CACHE_TTL_MS) {
+                    // Promote back into sessionStorage for speed
+                    try { sessionStorage.setItem(CACHE_KEY, JSON.stringify(p)); } catch (_) {}
+                    return { instances: p.data, source: "cookie" };
+                }
+            }
+        } catch (_) {}
+
+        return null;
+    }
+
+    function clearCache() {
+        try { sessionStorage.removeItem(CACHE_KEY); } catch (_) {}
+        document.cookie = `${CACHE_KEY}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+    }
+
+    // ── SCORE HELPERS ─────────────────────────────────────
+    function lerp(x1, x2, y1, y2, x) { return y1 + ((x - x1) * (y2 - y1)) / (x2 - x1); }
+
+    function calculateScore(issues, updatedAt, hasRelease = true, stars = 0, maxStars = 0) {
+        let base;
+        if (issues === 0)        base = 100;
+        else if (issues <= 10)   base = lerp(0, 10, 100, 50, issues);
+        else if (issues <= 20)   base = lerp(10, 20, 50, 30, issues);
+        else if (issues <= 30)   base = lerp(20, 30, 30, 10, issues);
+        else if (issues <= 50)   base = lerp(30, 50, 10, 5, issues);
+        else if (issues <= 100)  base = lerp(50, 100, 5, 1, issues);
+        else base = 1;
+
+        // Recency: 0 days = ×1.0, 30 days = ×0.5, linear. Floor at ×0.5 beyond 30 days.
+        let recency = 1;
+        if (updatedAt) {
+            const daysSince = (Date.now() - new Date(updatedAt).getTime()) / 86400000;
+            recency = daysSince >= 30 ? 0.5 : lerp(0, 30, 1, 0.5, daysSince);
+        }
+
+        // Stars: top repo = ×1.0, zero stars = ×0.5, linear between.
+        // If no repo has any stars, all get ×1.0 (neutral).
+        const starMult = (maxStars > 0) ? lerp(0, maxStars, 0.5, 1.0, Math.min(stars, maxStars)) : 1;
+
+        return Math.max(1, base * recency * starMult * (hasRelease ? 1 : 0.25));
+    }
+
+
+    function scoreColor(pct) {
+        if (pct >= 70) return "#3fb950";
+        if (pct >= 40) return "#d29922";
+        return "#f85149";
+    }
+
+    // ── RUNTIME STATE ─────────────────────────────────────
+    let cachedInstances = null;
+    let cacheSource     = null; // "live" | "session" | "cookie" | "fallback"
+
+    // ── DATA FETCH ────────────────────────────────────────
+    async function fetchInstances(forceRefresh = false) {
+        // Use in-memory cache if available and not forcing refresh
+        if (cachedInstances && !forceRefresh) { render(); return; }
+
+        // Try persistent cache (skip on force refresh)
+        if (!forceRefresh) {
+            const hit = loadCache();
+            if (hit) {
+                cachedInstances = hit.instances;
+                cacheSource     = hit.source;
+                render();
+                return;
+            }
+        } else {
+            clearCache();
+            cachedInstances = null;
+        }
+
+        // ── Live: GitHub forks API ─────────────────────────
+        try {
+            const forksRes = await ghFetch(FORKS_API);
+            if (!forksRes.ok) throw new Error(`GitHub API ${forksRes.status}`);
+
+            const forks  = await forksRes.json();
+            const cutoff = Date.now() - ONE_MONTH_MS;
+            const recent = forks.filter(f => new Date(f.pushed_at).getTime() >= cutoff);
+
+            const rawInstances = await Promise.all(recent.map(async fork => {
+                let version = "no release";
+                try {
+                    const relRes = await ghFetch(`https://api.github.com/repos/${fork.full_name}/releases/latest`);
+                    if (relRes.ok) {
+                        const rel = await relRes.json();
+                        version = rel.tag_name || rel.name || "no release";
+                    }
+                } catch (_) {}
+
+                return {
+                    fullName:  fork.full_name,
+                    name:      fork.name,
+                    owner:     fork.owner.login,
+                    stars:     fork.stargazers_count,
+                    issues:    fork.open_issues_count || 0,
+                    version,
+                    updatedAt: fork.pushed_at,
+                    online:    version !== "no release",
+                };
+            }));
+
+            // Second pass: score with star context
+            const maxStars = Math.max(0, ...rawInstances.map(i => i.stars));
+            const instances = rawInstances.map(inst => ({
+                ...inst,
+                score: calculateScore(inst.issues, inst.updatedAt, inst.online, inst.stars, maxStars),
+            }));
+
+            cachedInstances = instances;
+            cacheSource     = "live";
+            saveCache(instances);
+
+        } catch (_) {
+            // ── Last resort: data.json ─────────────────────
+            try {
+                const res  = await fetch(FALLBACK_DATA_URL);
+                const list = await res.json();
+
+                const rawInstances = await Promise.all(list.map(async item => {
+                    try {
+                        const [repoRes, relRes] = await Promise.all([
+                            ghFetch(`https://api.github.com/repos/${item.repository}`),
+                            ghFetch(`https://api.github.com/repos/${item.repository}/releases/latest`)
+                        ]);
+                        const r   = await repoRes.json();
+                        const rel = await relRes.json();
+                        return {
+                            fullName:  item.repository,
+                            name:      item.repository.split('/')[1],
+                            owner:     item.repository.split('/')[0],
+                            stars:     r.stargazers_count || 0,
+                            issues:    r.open_issues_count || 0,
+                            version:   rel.tag_name || rel.name || "no release",
+                            updatedAt: r.pushed_at,
+                            online:    !!(rel.tag_name || rel.name),
+                        };
+                    } catch (_) {
+                        return {
+                            fullName: item.repository,
+                            name:     item.repository.split('/')[1],
+                            owner:    item.repository.split('/')[0],
+                            stars: 0, issues: 0, version: "unknown",
+                            updatedAt: null, online: false,
+                        };
+                    }
+                }));
+
+                // Second pass: score with star context
+                const maxStars = Math.max(0, ...rawInstances.map(i => i.stars));
+                const instances = rawInstances.map(inst => ({
+                    ...inst,
+                    score: calculateScore(inst.issues, inst.updatedAt, inst.online, inst.stars, maxStars),
+                }));
+
+                cachedInstances = instances;
+                cacheSource     = "fallback";
+
+            } catch (e) {
+                document.getElementById('instance-list').innerHTML =
+                    `<p class="state-msg">⚠ Could not load instance data.</p>`;
+                return;
+            }
+        }
+
+        render();
+    }
+
+    // ── RENDER ────────────────────────────────────────────
+    function render() {
+        const list     = document.getElementById('instance-list');
+        const statsBox = document.getElementById('stats-box');
+        if (!cachedInstances) return;
+
+        const showOnline       = document.getElementById('filter-online').checked;
+        const showOffline      = document.getElementById('filter-offline').checked;
+        const showHighScore    = document.getElementById('filter-high-score').checked;
+        const hideNoRelease    = document.getElementById('filter-hide-no-release').checked;
+
+        const filtered = cachedInstances.filter(inst => {
+            if (showOnline    && !inst.online)                          return false;
+            if (showOffline   &&  inst.online)                          return false;
+            if (showHighScore &&  inst.score < 70)                      return false;
+            if (hideNoRelease &&  inst.version === "no release")        return false;
+            return true;
+        }).sort((a, b) => b.score - a.score);
+
+        // Stats sidebar
+        const onlineCount  = cachedInstances.filter(i => i.online).length;
+        const offlineCount = cachedInstances.length - onlineCount;
+        const sourceLabel  = cacheSource === 'session' ? ' · session cache'
+                           : cacheSource === 'cookie'  ? ' · cookie cache'
+                           : cacheSource === 'fallback' ? ' · fallback data' : '';
+
+        statsBox.innerHTML = `
+            <strong>${cachedInstances.length}</strong> total<br>
+            <span style="color:var(--online)">●</span> ${onlineCount} online &nbsp;
+            <span style="color:var(--offline)">●</span> ${offlineCount} offline<br>
+            <span style="opacity:.6;font-size:.75rem;">showing ${filtered.length}${sourceLabel}</span>
+        `;
+
+        list.innerHTML = '';
+
+        if (filtered.length === 0) {
+            list.innerHTML = `<p class="state-msg">No instances match the current filters.</p>`;
+            return;
+        }
+
+        // Show cache notice + refresh button when serving stale data
+        if (cacheSource && cacheSource !== 'live') {
+            const ttlMin = Math.ceil(CACHE_TTL_MS / 60000);
+            const notice = document.createElement('div');
+            notice.className = 'cache-notice';
+            notice.innerHTML = `
+                <span>cached data · refreshes every ${ttlMin} min</span>
+                <button id="refresh-btn">↺ refresh now</button>
+            `;
+            list.appendChild(notice);
+            notice.querySelector('#refresh-btn').addEventListener('click', () => {
+                cachedInstances = null;
+                list.innerHTML = `<p class="state-msg">Refreshing<span class="loading-dots"></span></p>`;
+                fetchInstances(true);
+            });
+        }
+
+        filtered.forEach((inst, i) => {
+            const isTop     = i === 0;
+            const scorePct  = inst.score.toFixed(1);
+            const color     = scoreColor(inst.score);
+            const daysAgo   = inst.updatedAt
+                ? Math.floor((Date.now() - new Date(inst.updatedAt)) / 86400000)
+                : null;
+            const updatedStr = daysAgo !== null
+                ? (daysAgo === 0 ? "updated today" : `updated ${daysAgo}d ago`)
+                : "";
+
+            const card = document.createElement('div');
+            card.className = isTop ? 'card top-instance' : 'card';
+            card.style.animationDelay = `${i * 30}ms`;
+            card.innerHTML = `
+                <div class="card-header">
+                    <div>
+                        <div class="card-name">${escHtml(inst.name)}</div>
+                        <div class="card-owner">${escHtml(inst.owner)}</div>
+                    </div>
+                    <div class="card-header-right">
+                        ${isTop ? `<span class="top-badge">★ top</span>` : ''}
+                        <span class="status-pill ${inst.online ? 'pill-online' : 'pill-offline'}">
+                            <span class="status-dot ${inst.online ? 'dot-online' : 'dot-offline'}"></span>
+                            ${inst.online ? 'online' : 'offline'}
+                        </span>
+                    </div>
+                </div>
+                <div class="card-version">${escHtml(inst.version)}</div>
+                <div class="score-bar">
+                    <div class="score-fill" style="width:${scorePct}%; background:${color};"></div>
+                </div>
+                <div class="card-meta">
+                    <span style="color:${color}; font-weight:600;">${scorePct}% health</span>
+                    <span>${inst.issues} issues</span>
+                </div>
+                <div class="card-footer">
+                    <a href="https://github.com/${escHtml(inst.fullName)}" target="_blank" rel="noopener">View Repo →</a>
+                    ${inst.stars > 0 ? `<span class="stars-badge">★ ${inst.stars}</span>` : ''}
+                    ${updatedStr ? `<span class="stars-badge">${updatedStr}</span>` : ''}
+                </div>
+            `;
+            list.appendChild(card);
+        });
+    }
+
+    function escHtml(str) {
+        return String(str)
+            .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+            .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // ── AUTH POPUP ───────────────────────────────────────
+    const authOverlay = document.getElementById('auth-overlay');
+
+    function openAuthPopup() {
+        const existing = loadToken();
+        if (existing) document.getElementById('token-input').value = existing;
+        authOverlay.classList.add('open');
+    }
+    function closeAuthPopup() {
+        authOverlay.classList.remove('open');
+    }
+
+    document.getElementById('auth-close').addEventListener('click', closeAuthPopup);
+    document.getElementById('auth-skip-btn').addEventListener('click', closeAuthPopup);
+    authOverlay.addEventListener('click', e => { if (e.target === authOverlay) closeAuthPopup(); });
+
+    document.getElementById('token-save-btn').addEventListener('click', () => {
+        const val = document.getElementById('token-input').value.trim();
+        if (val) {
+            saveToken(val);
+            updateTokenIndicator();
+            closeAuthPopup();
+            // Clear data cache so next load uses the token
+            clearCache();
+            cachedInstances = null;
+            document.getElementById('instance-list').innerHTML =
+                `<p class="state-msg">Refreshing with token<span class="loading-dots"></span></p>`;
+            fetchInstances();
+        }
+    });
+
+    // Allow Enter key in token input
+    document.getElementById('token-input').addEventListener('keydown', e => {
+        if (e.key === 'Enter') document.getElementById('token-save-btn').click();
+    });
+
+    // Header token button re-opens popup
+    document.getElementById('token-btn').addEventListener('click', openAuthPopup);
+
+    // ── FAQ TOGGLE ────────────────────────────────────────
+    const overlay = document.getElementById('faq-overlay');
+    document.getElementById('faq-btn').addEventListener('click', () => overlay.classList.add('open'));
+    document.getElementById('faq-close').addEventListener('click', () => overlay.classList.remove('open'));
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('open'); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') overlay.classList.remove('open'); });
+
+    // ── FILTER LISTENERS (re-render from cache, no re-fetch) ──
+    document.querySelectorAll('input[type="checkbox"]').forEach(cb =>
+        cb.addEventListener('change', render)
+    );
+
+    // ── INIT ──────────────────────────────────────────────
+    updateTokenIndicator();
+    // Show auth popup on startup only if no token is saved and no valid cache exists
+    if (!loadToken() && !loadCache()) {
+        openAuthPopup();
+    }
+    fetchInstances();
+</script>
+</body>
+</html>
