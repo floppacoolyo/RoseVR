@@ -1,10 +1,6 @@
 [
   {
-    "repository": "CubicCreeper/iis.Stupid.Menu-LTS",
+    "repository": "Seralyth/Seralyth-Menu",
     "server": true
-  },
-  {
-    "repository": "NullTheDev/iiDK.Reborn",
-    "server": false
   }
 ]

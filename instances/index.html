@@ -667,8 +667,6 @@ Providing a token allows for higher rate limits when fetching data, but it is no
     const TOKEN_KEY         = "gh_token";
 
     // ── TOKEN STORAGE ─────────────────────────────────────
-    // Stored only in sessionStorage — never persisted to cookies.
-
     function saveToken(tok) {
         try { sessionStorage.setItem(TOKEN_KEY, tok.trim()); } catch (_) {}
     }
@@ -707,11 +705,7 @@ Providing a token allows for higher rate limits when fetching data, but it is no
         }
     }
 
-
     // ── COOKIE / SESSION CACHE ────────────────────────────
-    // Priority: sessionStorage (fast, tab-scoped) → cookie (cross-tab, 15min TTL)
-    // Cookies have a 4 KB limit, so only write there if payload fits.
-
     function saveCache(instances) {
         try {
             const payload = JSON.stringify({ ts: Date.now(), data: instances });
@@ -724,7 +718,6 @@ Providing a token allows for higher rate limits when fetching data, but it is no
     }
 
     function loadCache() {
-        // 1. sessionStorage
         try {
             const raw = sessionStorage.getItem(CACHE_KEY);
             if (raw) {
@@ -733,13 +726,11 @@ Providing a token allows for higher rate limits when fetching data, but it is no
             }
         } catch (_) {}
 
-        // 2. cookie
         try {
             const match = document.cookie.split('; ').find(c => c.startsWith(CACHE_KEY + '='));
             if (match) {
                 const p = JSON.parse(decodeURIComponent(match.split('=').slice(1).join('=')));
                 if (Date.now() - p.ts < CACHE_TTL_MS) {
-                    // Promote back into sessionStorage for speed
                     try { sessionStorage.setItem(CACHE_KEY, JSON.stringify(p)); } catch (_) {}
                     return { instances: p.data, source: "cookie" };
                 }
@@ -767,20 +758,16 @@ Providing a token allows for higher rate limits when fetching data, but it is no
         else if (issues <= 100)  base = lerp(50, 100, 5, 1, issues);
         else base = 1;
 
-        // Recency: 0 days = ×1.0, 30 days = ×0.5, linear. Floor at ×0.5 beyond 30 days.
         let recency = 1;
         if (updatedAt) {
             const daysSince = (Date.now() - new Date(updatedAt).getTime()) / 86400000;
             recency = daysSince >= 30 ? 0.5 : lerp(0, 30, 1, 0.5, daysSince);
         }
 
-        // Stars: top repo = ×1.0, zero stars = ×0.5, linear between.
-        // If no repo has any stars, all get ×1.0 (neutral).
         const starMult = (maxStars > 0) ? lerp(0, maxStars, 0.5, 1.0, Math.min(stars, maxStars)) : 1;
 
         return Math.max(1, base * recency * starMult * (hasRelease ? 1 : 0.25));
     }
-
 
     function scoreColor(pct) {
         if (pct >= 70) return "#3fb950";
@@ -790,14 +777,44 @@ Providing a token allows for higher rate limits when fetching data, but it is no
 
     // ── RUNTIME STATE ─────────────────────────────────────
     let cachedInstances = null;
-    let cacheSource     = null; // "live" | "session" | "cookie" | "fallback"
+    let cacheSource     = null;
+
+    // ── FETCH A SINGLE REPO's DETAILS FROM GITHUB ────────
+    // Returns a raw instance object (without score) for a given "owner/repo" string.
+    async function fetchRepoDetails(fullName) {
+        try {
+            const [repoRes, relRes] = await Promise.all([
+                ghFetch(`https://api.github.com/repos/${fullName}`),
+                ghFetch(`https://api.github.com/repos/${fullName}/releases/latest`)
+            ]);
+            const r   = repoRes.ok  ? await repoRes.json()  : null;
+            const rel = relRes.ok   ? await relRes.json()   : null;
+            const version = (rel && (rel.tag_name || rel.name)) ? (rel.tag_name || rel.name) : "no release";
+            return {
+                fullName,
+                name:      fullName.split('/')[1],
+                owner:     fullName.split('/')[0],
+                stars:     r ? (r.stargazers_count || 0) : 0,
+                issues:    r ? (r.open_issues_count || 0) : 0,
+                version,
+                updatedAt: r ? r.pushed_at : null,
+                online:    version !== "no release",
+            };
+        } catch (_) {
+            return {
+                fullName,
+                name:      fullName.split('/')[1],
+                owner:     fullName.split('/')[0],
+                stars: 0, issues: 0, version: "unknown",
+                updatedAt: null, online: false,
+            };
+        }
+    }
 
     // ── DATA FETCH ────────────────────────────────────────
     async function fetchInstances(forceRefresh = false) {
-        // Use in-memory cache if available and not forcing refresh
         if (cachedInstances && !forceRefresh) { render(); return; }
 
-        // Try persistent cache (skip on force refresh)
         if (!forceRefresh) {
             const hit = loadCache();
             if (hit) {
@@ -811,7 +828,25 @@ Providing a token allows for higher rate limits when fetching data, but it is no
             cachedInstances = null;
         }
 
-        // ── Live: GitHub forks API ─────────────────────────
+        // ── Always load data.json manual additions ────────
+        // These are fetched in parallel with the forks API and merged in,
+        // deduplicating by full repository name (case-insensitive).
+        let manualRepos = [];
+        try {
+            const dataRes = await fetch(FALLBACK_DATA_URL);
+            if (dataRes.ok) {
+                const list = await dataRes.json();
+                // list is expected to be an array of { repository: "owner/repo" } objects
+                manualRepos = list.map(item => String(item.repository).toLowerCase());
+            }
+        } catch (_) {
+            // data.json missing or malformed — proceed without manual additions
+        }
+
+        // ── Live: GitHub forks API ────────────────────────
+        let rawInstances = [];
+        let usedFallback  = false;
+
         try {
             const forksRes = await ghFetch(FORKS_API);
             if (!forksRes.ok) throw new Error(`GitHub API ${forksRes.status}`);
@@ -820,7 +855,7 @@ Providing a token allows for higher rate limits when fetching data, but it is no
             const cutoff = Date.now() - ONE_MONTH_MS;
             const recent = forks.filter(f => new Date(f.pushed_at).getTime() >= cutoff);
 
-            const rawInstances = await Promise.all(recent.map(async fork => {
+            rawInstances = await Promise.all(recent.map(async fork => {
                 let version = "no release";
                 try {
                     const relRes = await ghFetch(`https://api.github.com/repos/${fork.full_name}/releases/latest`);
@@ -842,68 +877,37 @@ Providing a token allows for higher rate limits when fetching data, but it is no
                 };
             }));
 
-            // Second pass: score with star context
-            const maxStars = Math.max(0, ...rawInstances.map(i => i.stars));
-            const instances = rawInstances.map(inst => ({
-                ...inst,
-                score: calculateScore(inst.issues, inst.updatedAt, inst.online, inst.stars, maxStars),
-            }));
-
-            cachedInstances = instances;
-            cacheSource     = "live";
-            saveCache(instances);
-
         } catch (_) {
-            // ── Last resort: data.json ─────────────────────
-            try {
-                const res  = await fetch(FALLBACK_DATA_URL);
-                const list = await res.json();
-
-                const rawInstances = await Promise.all(list.map(async item => {
-                    try {
-                        const [repoRes, relRes] = await Promise.all([
-                            ghFetch(`https://api.github.com/repos/${item.repository}`),
-                            ghFetch(`https://api.github.com/repos/${item.repository}/releases/latest`)
-                        ]);
-                        const r   = await repoRes.json();
-                        const rel = await relRes.json();
-                        return {
-                            fullName:  item.repository,
-                            name:      item.repository.split('/')[1],
-                            owner:     item.repository.split('/')[0],
-                            stars:     r.stargazers_count || 0,
-                            issues:    r.open_issues_count || 0,
-                            version:   rel.tag_name || rel.name || "no release",
-                            updatedAt: r.pushed_at,
-                            online:    !!(rel.tag_name || rel.name),
-                        };
-                    } catch (_) {
-                        return {
-                            fullName: item.repository,
-                            name:     item.repository.split('/')[1],
-                            owner:    item.repository.split('/')[0],
-                            stars: 0, issues: 0, version: "unknown",
-                            updatedAt: null, online: false,
-                        };
-                    }
-                }));
-
-                // Second pass: score with star context
-                const maxStars = Math.max(0, ...rawInstances.map(i => i.stars));
-                const instances = rawInstances.map(inst => ({
-                    ...inst,
-                    score: calculateScore(inst.issues, inst.updatedAt, inst.online, inst.stars, maxStars),
-                }));
-
-                cachedInstances = instances;
-                cacheSource     = "fallback";
-
-            } catch (e) {
-                document.getElementById('instance-list').innerHTML =
-                    `<p class="state-msg">⚠ Could not load instance data.</p>`;
-                return;
-            }
+            usedFallback = true;
         }
+
+        // ── Merge manual repos from data.json ─────────────
+        // Build a set of full names already present from the forks API.
+        const presentNames = new Set(rawInstances.map(i => i.fullName.toLowerCase()));
+
+        // Fetch details only for repos not already in the forks list.
+        const missing = manualRepos.filter(r => !presentNames.has(r));
+        if (missing.length > 0) {
+            const manualInstances = await Promise.all(missing.map(fetchRepoDetails));
+            rawInstances = [...rawInstances, ...manualInstances];
+        }
+
+        if (rawInstances.length === 0) {
+            document.getElementById('instance-list').innerHTML =
+                `<p class="state-msg">⚠ Could not load instance data.</p>`;
+            return;
+        }
+
+        // ── Second pass: score with global star context ───
+        const maxStars = Math.max(0, ...rawInstances.map(i => i.stars));
+        const instances = rawInstances.map(inst => ({
+            ...inst,
+            score: calculateScore(inst.issues, inst.updatedAt, inst.online, inst.stars, maxStars),
+        }));
+
+        cachedInstances = instances;
+        cacheSource     = usedFallback ? "fallback" : "live";
+        saveCache(instances);
 
         render();
     }
@@ -927,7 +931,6 @@ Providing a token allows for higher rate limits when fetching data, but it is no
             return true;
         }).sort((a, b) => b.score - a.score);
 
-        // Stats sidebar
         const onlineCount  = cachedInstances.filter(i => i.online).length;
         const offlineCount = cachedInstances.length - onlineCount;
         const sourceLabel  = cacheSource === 'session' ? ' · session cache'
@@ -948,7 +951,6 @@ Providing a token allows for higher rate limits when fetching data, but it is no
             return;
         }
 
-        // Show cache notice + refresh button when serving stale data
         if (cacheSource && cacheSource !== 'live') {
             const ttlMin = Math.ceil(CACHE_TTL_MS / 60000);
             const notice = document.createElement('div');
@@ -1039,7 +1041,6 @@ Providing a token allows for higher rate limits when fetching data, but it is no
             saveToken(val);
             updateTokenIndicator();
             closeAuthPopup();
-            // Clear data cache so next load uses the token
             clearCache();
             cachedInstances = null;
             document.getElementById('instance-list').innerHTML =
@@ -1048,12 +1049,10 @@ Providing a token allows for higher rate limits when fetching data, but it is no
         }
     });
 
-    // Allow Enter key in token input
     document.getElementById('token-input').addEventListener('keydown', e => {
         if (e.key === 'Enter') document.getElementById('token-save-btn').click();
     });
 
-    // Header token button re-opens popup
     document.getElementById('token-btn').addEventListener('click', openAuthPopup);
 
     // ── FAQ TOGGLE ────────────────────────────────────────
@@ -1063,14 +1062,13 @@ Providing a token allows for higher rate limits when fetching data, but it is no
     overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('open'); });
     document.addEventListener('keydown', e => { if (e.key === 'Escape') overlay.classList.remove('open'); });
 
-    // ── FILTER LISTENERS (re-render from cache, no re-fetch) ──
+    // ── FILTER LISTENERS ──────────────────────────────────
     document.querySelectorAll('input[type="checkbox"]').forEach(cb =>
         cb.addEventListener('change', render)
     );
 
     // ── INIT ──────────────────────────────────────────────
     updateTokenIndicator();
-    // Show auth popup on startup only if no token is saved and no valid cache exists
     if (!loadToken() && !loadCache()) {
         openAuthPopup();
     }
