@@ -1,14 +1,38 @@
 let hasUserInteracted = false;
+let currentSongIndex = Math.floor(Math.random() * 3);
 
+// dad da = gotta code fast 
 function initMedia() {
   console.log("initMedia called");
-  const backgroundMusic = document.getElementById('background-music');
-  backgroundMusic.src = `assets/background_music${Math.floor(Math.random() * 3)}.mp3`;
-  if (!backgroundMusic) { 
-    console.error("Media elements not found");
+
+  const backgroundMusic = document.getElementById("background-music");
+
+  if (!backgroundMusic) {
+    console.error("Audio element not found bruh");
     return;
   }
+
+  // Set the first random song
+  backgroundMusic.src = `assets/RoseVR_Assets/background_music${currentSongIndex}.mp3`;
   backgroundMusic.volume = 0.3;
+
+  // THIS IS THE FIX: When the song ends, pick a new one and play it
+  backgroundMusic.addEventListener('ended', () => {
+    let nextSongIndex = currentSongIndex;
+    
+    // Make sure it doesn't pick the exact same song twice in a row
+    while (nextSongIndex === currentSongIndex) {
+      nextSongIndex = Math.floor(Math.random() * 3);
+    }
+    
+    currentSongIndex = nextSongIndex;
+    backgroundMusic.src = `assets/RoseVR_Assets/background_music${currentSongIndex}.mp3`;
+    
+    // Play the new song automatically
+    backgroundMusic.play().catch(err => {
+      console.error("Failed to play next song:", err);
+    });
+  });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -36,7 +60,22 @@ document.addEventListener('DOMContentLoaded', () => {
   const profilePicture = document.querySelector('.profile-picture');
   const profileContainer = document.querySelector('.profile-container');
 
-  const startMessages = ["click to view", "click to stalk", "click just because", "click to come inside", "click to visualize", "click to unlock", "click to feast", "click to open the door", "click to gently open the door", "click to sprint", "click to jump", "click to say apple"];
+  // Actually load the audio on startup
+  initMedia();
+
+  const startMessages =[
+    "click to sybau", 
+    "click cuz dad da", 
+    "click to enter the villain arc", 
+    "click to drink dr. pepper", 
+    "click to get ddossed", 
+    "click if ur wifi is poop",
+    "click to open unity hub",
+    "click to goon",
+    "click to play minetransit",
+    "click if u hate physics class",
+    "click to be tuff"
+  ];
   const startMessage = startMessages[Math.floor(Math.random() * startMessages.length)];
   let startTextContent = '';
   let startIndex = 0;
@@ -51,15 +90,13 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(typeWriterStart, 100);
   }
 
-
   setInterval(() => {
     startCursorVisible = !startCursorVisible;
     startText.textContent = startTextContent + (startCursorVisible ? '|' : ' ');
   }, 500);
 
-
   function initializeVisitorCounter() {
-    totalVisitors = Math.floor(Math.random() * 900000) + 100000;
+    let totalVisitors = Math.floor(Math.random() * 900000) + 100000;
     visitorCount.textContent = totalVisitors.toLocaleString();
   }
   
@@ -106,21 +143,19 @@ document.addEventListener('DOMContentLoaded', () => {
     typeWriterBio();
   });
 
-
-  const names = [
-    "crimson",
-    "crimson?",
-    "goldentrophy",
-    "iidk",
-    "crimsoncauldron",
-    "crimsoncc",
-    "goldentrophii",
-    "aa_goldentrophy",
-    "aa_crimsoncauldron",
-    "iiwashere",
-    "herewasii",
-    "kdii",
-    "grayson"
+  const names =[
+    "Rose",
+    "mtraustria",
+    "H4LO GT",
+    "Rose GT",
+    "Austria VR",
+    "Project Austria",
+    "CoderVR",
+    "RoseVR",
+    "H4LORBX",
+    "Crafter_A_T",
+    "Austria67",
+    "GermanVR"
   ];
   let name = names[Math.floor(Math.random() * names.length)];
   let nameText = '';
@@ -156,32 +191,47 @@ document.addEventListener('DOMContentLoaded', () => {
     profileName.textContent = nameText + (nameCursorVisible ? '|' : ' ');
   }, 500);
 
-
-  const bioMessages = [
-    "15yo creature on the internet",
-    "only 15 years old, don't think about it",
-    "i don't have a brother",
-    "creator of some stupid mod",
-    "owner of goldentrophy software",
-
-    "403 forbidden",
-    "object reference not set to an instance of an object",
-    "winforms is so bad it's good",
-
-    "i support mostly everyone",
-    "never underestimate yourself",
-    "check out my site: 127.0.0.1:3000",
-
-    "i hate cosine",
-    "mechanical keyboards",
-    "contacting the mothership",
-
-    "i <3 debian",
-    "i hate typescript",
-
-    "admin@goldentrophy.software",
-    "hi nick"
+  const bioMessages =[
+    "13yo unity skid",
+    "dad da = no call",
+    "future deutsche bahn zugfahrer",
+    "owner of minetransit",
+    "too lazy to fix errors (kb)",
+    "sybau",
+    "oha",
+    "W",
+    "cant call dad is home",
+    "i only use unity 2022",
+    "im basically raeplays but pink",
+    "tuff",
+    "i have anxiety",
+    "i drink too much dr. pepper",
+    "founder of rose tag",
+    "villain arc",
+    "67",
+    "ist mir egal",
+    "im sleepy",
+    "idk what im doing",
+    "im a chameleon",
+    "vr ded",
+    "waiting for applab",
+    "trigger digger skibidi",
+    "im a ginger",
+    "i give up",
+    "kb",
+    "i eat like a big back but im slim shady",
+    "what is this diddy blud doing on the calculator",
+    "i want a mikrowelle in my wg",
+    "i just rage quit",
+    "im top 100 worst devs in copies",
+    "my wifi is poop",
+    "i have 0 ahnung",
+    "im nobody special just stupid",
+    "i only eat food i like",
+    "my dad is gonna whoop me",
+    "im lonely rn"
   ];
+  
   let bioText = '';
   let bioIndex = 0;
   let bioMessageIndex = Math.floor(Math.random() * bioMessages.length);
@@ -212,14 +262,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     setTimeout(typeWriterBio, isNameDeleting ? 20 : Math.floor(Math.random() * 101) + 30);
-}
-
+  }
 
   setInterval(() => {
     bioCursorVisible = !bioCursorVisible;
     profileBio.textContent = bioText + (bioCursorVisible ? '|' : ' ');
   }, 500);
-
 
   let currentAudio = backgroundMusic;
   let isMuted = false;
@@ -324,7 +372,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-
   profilePicture.addEventListener('click', () => {
     profileContainer.classList.remove('fast-orbit');
     profileContainer.classList.remove('orbit');
@@ -350,7 +397,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 500);
   });
 
- 
   let isShowingSkills = false;
   resultsButton.addEventListener('click', () => {
     if (!isShowingSkills) {
@@ -366,14 +412,14 @@ document.addEventListener('DOMContentLoaded', () => {
             { x: 100, opacity: 0 },
             { x: 0, opacity: 1, duration: 0.5, ease: 'power2.out' }
           );
-          gsap.to(pythonBar, { width: '95%', duration: 2, ease: 'power2.out' });
-          gsap.to(javaBar, { width: '35%', duration: 2, ease: 'power2.out' });
-          gsap.to(cssBar, { width: '70%', duration: 2, ease: 'power2.out' });
-          gsap.to(htmlBar, { width: '65%', duration: 2, ease: 'power2.out' });
-          gsap.to(javascriptBar, { width: '75%', duration: 2, ease: 'power2.out' });
-          gsap.to(nodejsBar, { width: '70%', duration: 2, ease: 'power2.out' });
-          gsap.to(typescriptBar, { width: '75%', duration: 2, ease: 'power2.out' });
-          gsap.to(csharpBar, { width: '100%', duration: 2, ease: 'power2.out' });
+          gsap.to(pythonBar, { width: '10%', duration: 2, ease: 'power2.out' });
+          gsap.to(javaBar, { width: '5%', duration: 2, ease: 'power2.out' });
+          gsap.to(cssBar, { width: '15%', duration: 2, ease: 'power2.out' });
+          gsap.to(htmlBar, { width: '15%', duration: 2, ease: 'power2.out' });
+          gsap.to(javascriptBar, { width: '5%', duration: 2, ease: 'power2.out' });
+          gsap.to(nodejsBar, { width: '5%', duration: 2, ease: 'power2.out' });
+          gsap.to(typescriptBar, { width: '5%', duration: 2, ease: 'power2.out' });
+          gsap.to(csharpBar, { width: '30%', duration: 2, ease: 'power2.out' });
         }
       });
       resultsHint.classList.remove('hidden');
@@ -413,14 +459,14 @@ document.addEventListener('DOMContentLoaded', () => {
             { x: 100, opacity: 0 },
             { x: 0, opacity: 1, duration: 0.5, ease: 'power2.out' }
           );
-          gsap.to(pythonBar, { width: '95%', duration: 2, ease: 'power2.out' });
-          gsap.to(javaBar, { width: '35%', duration: 2, ease: 'power2.out' });
-          gsap.to(cssBar, { width: '70%', duration: 2, ease: 'power2.out' });
-          gsap.to(htmlBar, { width: '65%', duration: 2, ease: 'power2.out' });
-          gsap.to(javascriptBar, { width: '75%', duration: 2, ease: 'power2.out' });
-          gsap.to(nodejsBar, { width: '70%', duration: 2, ease: 'power2.out' });
-          gsap.to(typescriptBar, { width: '75%', duration: 2, ease: 'power2.out' });
-          gsap.to(csharpBar, { width: '100%', duration: 2, ease: 'power2.out' });
+          gsap.to(pythonBar, { width: '10%', duration: 2, ease: 'power2.out' });
+          gsap.to(javaBar, { width: '5%', duration: 2, ease: 'power2.out' });
+          gsap.to(cssBar, { width: '15%', duration: 2, ease: 'power2.out' });
+          gsap.to(htmlBar, { width: '15%', duration: 2, ease: 'power2.out' });
+          gsap.to(javascriptBar, { width: '5%', duration: 2, ease: 'power2.out' });
+          gsap.to(nodejsBar, { width: '5%', duration: 2, ease: 'power2.out' });
+          gsap.to(typescriptBar, { width: '5%', duration: 2, ease: 'power2.out' });
+          gsap.to(csharpBar, { width: '30%', duration: 2, ease: 'power2.out' });
         }
       });
       resultsHint.classList.remove('hidden');
@@ -444,7 +490,6 @@ document.addEventListener('DOMContentLoaded', () => {
       isShowingSkills = false;
     }
   });
-
 
   typeWriterStart();
 });
